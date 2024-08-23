@@ -1,6 +1,6 @@
 # Imports
 from PyQt5.QtCore import Qt, QDate
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox, QTableWidget, QHeaderView, QCheckBox, QDateEdit, QLineEdit, QTableWidgetItem
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox, QTableWidget, QHeaderView, QCheckBox, QDateEdit, QLineEdit, QTableWidgetItem, QComboBox
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 import matplotlib.pyplot as plt
@@ -27,12 +27,12 @@ class FitTrack(QWidget):
         self.date_box = QDateEdit()
         self.date_box.setDate(QDate.currentDate()) # Displays current date
         
-        self.kal_box = QLineEdit()
-        self.kal_box.setPlaceholderText("Number of Burned Calories")
-        self.distance_box = QLineEdit()
-        self.distance_box.setPlaceholderText("Enter distance ran")
-        self.description = QLineEdit()
-        self.description.setPlaceholderText("Enter a description")
+        self.rep_box = QLineEdit()
+        self.rep_box.setPlaceholderText("Number of reps completed")
+        self.weight_box = QLineEdit()
+        self.weight_box.setPlaceholderText("Enter weight lifted (lbs)")
+        self.exercise_type = QComboBox()
+        self.exercise_type.addItems(["Bench Press", "Squat", "Deadlift", "Other"])
 
         self.submit_btn = QPushButton("Submit")
         self.add_btn = QPushButton("Add")
@@ -42,7 +42,7 @@ class FitTrack(QWidget):
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Id","Date","Calories","Distance","Description"])
+        self.table.setHorizontalHeaderLabels(["Id","Date","Reps","Weight","Exercise Type"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # Removes the whitespace for the table label
 
         self.figure = plt.figure()
@@ -60,12 +60,12 @@ class FitTrack(QWidget):
 
         self.sub_row1.addWidget(QLabel("Date:"))
         self.sub_row1.addWidget(self.date_box)
-        self.sub_row2.addWidget(QLabel("Calories:"))
-        self.sub_row2.addWidget(self.kal_box)
-        self.sub_row3.addWidget(QLabel("KM:"))
-        self.sub_row3.addWidget(self.distance_box)
-        self.sub_row4.addWidget(QLabel("Description:"))
-        self.sub_row4.addWidget(self.description)
+        self.sub_row2.addWidget(QLabel("Reps:"))
+        self.sub_row2.addWidget(self.rep_box)
+        self.sub_row3.addWidget(QLabel("Lbs:"))
+        self.sub_row3.addWidget(self.weight_box)
+        self.sub_row4.addWidget(QLabel("Exercise:"))
+        self.sub_row4.addWidget(self.exercise_type)
 
         self.col1.addLayout(self.sub_row1)
         self.col1.addLayout(self.sub_row2)
@@ -98,7 +98,7 @@ class FitTrack(QWidget):
     def button_click(self):
         self.add_btn.clicked.connect(self.add_workout)
         self.delete_btn.clicked.connect(self.delete_workout)
-        self.submit_btn.clicked.connect(self.calculate_calories)
+        self.submit_btn.clicked.connect(self.calculate_reps)
         self.clear_btn.clicked.connect(self.reset)
 
     # Load Tables
@@ -109,39 +109,42 @@ class FitTrack(QWidget):
         while query.next():
             fit_id = query.value(0)
             date = query.value(1)
-            calories = query.value(2)
-            distance = query.value(3)
-            description = query.value(4)
+            reps = query.value(2)
+            weight = query.value(3)
+            exercise = query.value(4)
 
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(str(fit_id)))
             self.table.setItem(row, 1, QTableWidgetItem(date))
-            self.table.setItem(row, 2, QTableWidgetItem(str(calories)))
-            self.table.setItem(row, 3, QTableWidgetItem(str(distance)))
-            self.table.setItem(row, 4, QTableWidgetItem(description))
+            self.table.setItem(row, 2, QTableWidgetItem(str(reps)))
+            self.table.setItem(row, 3, QTableWidgetItem(str(weight)))
+            self.table.setItem(row, 4, QTableWidgetItem(exercise))
             row += 1
 
     # Add Tables
     def add_workout(self):
         date = self.date_box.date().toString("yyyy-MM-dd")
-        calories = self.kal_box.text()
-        distance = self.distance_box.text()
-        description = self.description.text()
+        reps = self.rep_box.text()
+        weight = self.weight_box.text()
+        exercise = self.exercise_type.currentText()
 
         query = QSqlQuery("""
-                          INSERT INTO fitness (date, calories, distance, description)
+                          INSERT INTO fitness (date, reps, weight, exercise_type)
                           VALUES (?,?,?,?)
                           """)
         query.addBindValue(date)
-        query.addBindValue(calories)
-        query.addBindValue(distance)
-        query.addBindValue(description)
-        query.exec_()
+        query.addBindValue(reps)
+        query.addBindValue(weight)
+        query.addBindValue(exercise)
+
+        if not query.exec_():
+            print(query.lastError().text())
+        else:
+            print("Successfully logged workout")
 
         self.date_box.setDate(QDate.currentDate())
-        self.kal_box.clear()
-        self.distance_box.clear()
-        self.description.clear()
+        self.rep_box.clear()
+        self.weight_box.clear()
 
         self.load_table()
 
@@ -166,35 +169,35 @@ class FitTrack(QWidget):
 
         self.load_table()
 
-    # Calc Calories
-    def calculate_calories(self):
-        distances = []
-        calories = []
+    # Calc Reps
+    def calculate_reps(self):
+        weights = []
+        reps = []
 
-        query = QSqlQuery("SELECT distance, calories From fitness ORDER BY calories ASC")
+        query = QSqlQuery("SELECT weight, reps From fitness ORDER BY reps ASC")
         while query.next():
-            distance = query.value(0)
-            calorie = query.value(1)
-            distances.append(distance)
-            calories.append(calorie)
+            weight = query.value(0)
+            rep = query.value(1)
+            weights.append(weight)
+            reps.append(rep)
 
         try:
-            min_calorie = min(calories)
-            max_calories = max(calories)
-            normalized_calories = [(calorie - min_calorie) / (max_calories - min_calorie) for calorie in calories]
+            min_reps = min(reps)
+            max_reps = max(reps)
+            normalized_reps = [(rep - min_reps) / (max_reps - min_reps) for rep in reps]
 
             plt.style.use("Solarize_Light2") # Possibly customize (Google 'plt.style.use' and read documentation)
             ax = self.figure.subplots()
-            ax.scatter(distances, calories, c=normalized_calories, cmap="viridis", label="Data Points")
-            ax.set_title("Distance vs. Calories")
-            ax.set_xlabel("Distance")
-            ax.set_ylabel("Calories")
-            cbar = ax.figure.colorbar(ax.collections[0], label="Normalized Calories")
+            ax.scatter(weights, reps, c=normalized_reps, cmap="viridis", label="Data Points")
+            ax.set_title("Weight Lifted vs. Reps Completed")
+            ax.set_xlabel("Weight")
+            ax.set_ylabel("Reps")
+            rbar = ax.figure.colorbar(ax.collections[0], label="Normalized Reps")
             ax.legend()
             self.canvas.draw()
 
         except Exception as e:
-            print("ERROR:{e}")
+            print(f"ERROR {e}")
             QMessageBox.warning(self,"Error","Please enter some data first!")
 
     def apply_styles(self):
@@ -237,17 +240,12 @@ class FitTrack(QWidget):
         figure_color = "#b8c9e1"
         self.figure.patch.set_facecolor(figure_color)
         self.canvas.setStyleSheet(f"background-color:{figure_color}")
-    # Click
 
-    # Dark Mode
-
-
-    # Reset
+    # Reset (Doesn't reset table)
     def reset(self):
         self.date_box.setDate(QDate.currentDate())
-        self.kal_box.clear()
-        self.distance_box.clear()
-        self.description.clear()
+        self.rep_box.clear()
+        self.weight_box.clear()
         self.figure.clear()
         self.canvas.draw()
 
@@ -265,9 +263,9 @@ query.exec_("""
             CREATE TABLE IF NOT EXISTS fitness (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT,
-                calories REAL,
-                distance REAL,
-                description TEXT
+                reps REAL,
+                weight REAL,
+                exercise_type TEXT
             )
             """)
 
