@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLay
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from sys import exit
@@ -173,27 +174,43 @@ class FitTrack(QWidget):
     def calculate_reps(self):
         weights = []
         reps = []
+        exercises = []
 
-        query = QSqlQuery("SELECT weight, reps From fitness ORDER BY reps ASC")
+        query = QSqlQuery("SELECT weight, reps, exercise_type From fitness ORDER BY reps ASC")
         while query.next():
             weight = query.value(0)
             rep = query.value(1)
+            exercise = query.value(2)
             weights.append(weight)
             reps.append(rep)
+            exercises.append(exercise)
+
 
         try:
-            min_reps = min(reps)
-            max_reps = max(reps)
-            normalized_reps = [(rep - min_reps) / (max_reps - min_reps) for rep in reps]
+            exercise_colours = {
+                'Bench Press': 'red',
+                'Squat': 'blue',
+                'Deadlift': 'yellow',
+                'Other': 'green'
+            }
+
+            colours = [exercise_colours.get(exercise) for exercise in exercises]
 
             plt.style.use("Solarize_Light2") # Possibly customize (Google 'plt.style.use' and read documentation)
             ax = self.figure.subplots()
-            ax.scatter(weights, reps, c=normalized_reps, cmap="viridis", label="Data Points")
+            ax.scatter(weights, reps, c=colours, label="Data Points")
             ax.set_title("Weight Lifted vs. Reps Completed")
             ax.set_xlabel("Weight")
             ax.set_ylabel("Reps")
-            rbar = ax.figure.colorbar(ax.collections[0], label="Normalized Reps")
-            ax.legend()
+
+            # Legend
+            red_patch = mpatches.Patch(color="red", label="Bench Press")
+            blue_patch = mpatches.Patch(color="blue", label="Squat")
+            yellow_patch = mpatches.Patch(color="yellow", label="Deadlift")
+            green_patch = mpatches.Patch(color="green", label="Other")
+            patch_list = [red_patch, blue_patch, yellow_patch, green_patch]
+            ax.legend(handles=patch_list)
+
             self.canvas.draw()
 
         except Exception as e:
