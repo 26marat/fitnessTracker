@@ -1,6 +1,6 @@
 # Imports
 from PyQt5.QtCore import Qt, QDate
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox, QTableWidget, QHeaderView, QCheckBox, QDateEdit, QLineEdit, QTableWidgetItem, QComboBox
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox, QTableWidget, QHeaderView, QDateEdit, QLineEdit, QTableWidgetItem, QComboBox
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 import matplotlib.pyplot as plt
@@ -22,7 +22,7 @@ class FitTrack(QWidget):
     def settings(self):
         self.setWindowTitle("FitTrack")
         self.resize(800,600)
-        
+
     # init UI
     def initUI(self):
         self.date_box = QDateEdit()
@@ -39,7 +39,12 @@ class FitTrack(QWidget):
         self.add_btn = QPushButton("Add")
         self.delete_btn = QPushButton("Delete")
         self.clear_btn = QPushButton("Clear")
-        self.dark_mode = QPushButton("Dark Mode")
+        self.summary_btn = QPushButton(" Workout Summary")
+
+        self.total_workouts_label = QLabel("Total Workouts: 0")
+        self.total_weight_label = QLabel("Total Weight Lifted: 0 lbs")
+        self.total_reps_label = QLabel("Total Reps Completed: 0")
+        self.average_weight_label = QLabel("Average Weight per Exercise: 0 lbs")
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)
@@ -72,7 +77,6 @@ class FitTrack(QWidget):
         self.col1.addLayout(self.sub_row2)
         self.col1.addLayout(self.sub_row3)
         self.col1.addLayout(self.sub_row4)
-        self.col1.addWidget(self.dark_mode)
 
         btn_row1 = QHBoxLayout()
         btn_row2 = QHBoxLayout()
@@ -91,6 +95,7 @@ class FitTrack(QWidget):
         self.master_layout.addLayout(self.col1, 30)
         self.master_layout.addLayout(self.col2, 70)
         self.setLayout(self.master_layout)
+        
 
         self.apply_styles()
         self.load_table()
@@ -156,6 +161,7 @@ class FitTrack(QWidget):
 
         if selected_row == -1:
             QMessageBox.warning(self,"Error","Please choose a row to delete")
+            return
 
         fit_id = int(self.table.item(selected_row, 0).text())
         confirm = QMessageBox.question(self,"Are you sure?", "Delete this workout", QMessageBox.Yes | QMessageBox.No)
@@ -257,6 +263,22 @@ class FitTrack(QWidget):
         figure_color = "#b8c9e1"
         self.figure.patch.set_facecolor(figure_color)
         self.canvas.setStyleSheet(f"background-color:{figure_color}")
+    
+    # def summary(self):
+
+    #     query = QSqlQuery("SELECT COUNT(*), SUM(weight), SUM(reps), AVG(weight) FROM fitness")
+    #     if query.next():
+    #         total_workouts = query.value(0)
+    #         self.total_workouts_label.setText(f"Total Workouts: {total_workouts}")
+
+    #         total_weight_lifted = query.value(1)
+    #         self.total_weight_label.setText(f"Total Weight Lifted: {total_weight_lifted} lbs") 
+
+    #         total_reps = query.value(2)
+    #         self.total_reps_label.setText(f"Total Reps Completed: {total_reps}")
+
+    #         average_weight = query.value(3)
+    #         self.average_weight_label.setText(f"Average Weight per Exercise: {average_weight} lbs")
 
     # Reset (Doesn't reset table)
     def reset(self):
