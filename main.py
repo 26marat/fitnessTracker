@@ -11,7 +11,7 @@ from sys import exit
 
 
 # Main Class
-class FitTrack(QWidget):
+class ExerciseTracker(QWidget):
     def __init__(self):
         super().__init__()
         self.settings()
@@ -20,7 +20,7 @@ class FitTrack(QWidget):
     
     # Settings
     def settings(self):
-        self.setWindowTitle("FitTrack")
+        self.setWindowTitle("Exercise Tracker")
         self.resize(800,600)
 
     # init UI
@@ -40,11 +40,6 @@ class FitTrack(QWidget):
         self.delete_btn = QPushButton("Delete")
         self.clear_btn = QPushButton("Clear")
         self.summary_btn = QPushButton(" Workout Summary")
-
-        self.total_workouts_label = QLabel("Total Workouts: 0")
-        self.total_weight_label = QLabel("Total Weight Lifted: 0 lbs")
-        self.total_reps_label = QLabel("Total Reps Completed: 0")
-        self.average_weight_label = QLabel("Average Weight per Exercise: 0 lbs")
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)
@@ -95,8 +90,7 @@ class FitTrack(QWidget):
         self.master_layout.addLayout(self.col1, 30)
         self.master_layout.addLayout(self.col2, 70)
         self.setLayout(self.master_layout)
-        
-
+    
         self.apply_styles()
         self.load_table()
 
@@ -202,7 +196,7 @@ class FitTrack(QWidget):
 
             colours = [exercise_colours.get(exercise) for exercise in exercises]
 
-            plt.style.use("Solarize_Light2") # Possibly customize (Google 'plt.style.use' and read documentation)
+            plt.style.use("fivethirtyeight") # Possibly customize (Google 'plt.style.use' and read documentation)
             ax = self.figure.subplots()
             ax.scatter(weights, reps, c=colours, label="Data Points")
             ax.set_title("Weight Lifted vs. Reps Completed")
@@ -226,7 +220,7 @@ class FitTrack(QWidget):
     def apply_styles(self):
         self.setStyleSheet("""
             QWidget {
-                background-color: #b8c9e1;
+                background-color: #FFA500;
             }
             
             QLabel {
@@ -235,21 +229,21 @@ class FitTrack(QWidget):
             }
             
             QLineEdit, QComboBox, QDateEdit {
-                background-color: #b8c9e1;
+                background-color: #FFA500;
                 color: #333;
                 border: 1px solid #444;
                 padding: 5px;
             }
             
             QTableWidget {
-                background-color: #b8c9e1;
+                background-color: #FFA500;
                 color: #333;
                 border: 1px solid #444;
                 selection-background-color: #ddd;
             }
             
             QPushButton {
-                background-color: #4caf50;
+                background-color: #1d5191;
                 color: #fff;
                 border: none;
                 padding: 8px 16px;
@@ -260,7 +254,7 @@ class FitTrack(QWidget):
                 background-color: #45a049;
             }
         """)
-        figure_color = "#b8c9e1"
+        figure_color = "#FFA500"
         self.figure.patch.set_facecolor(figure_color)
         self.canvas.setStyleSheet(f"background-color:{figure_color}")
     
@@ -302,7 +296,7 @@ query.exec_("""
             CREATE TABLE IF NOT EXISTS fitness (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT,
-                reps REAL,
+                reps INTEGER,
                 weight REAL,
                 exercise_type TEXT
             )
@@ -310,6 +304,6 @@ query.exec_("""
 
 if __name__ == "__main__":
     app = QApplication([])
-    main = FitTrack()
+    main = ExerciseTracker()
     main.show()
     app.exec_()
