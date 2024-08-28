@@ -1,16 +1,17 @@
 # Imports
 from PyQt5.QtCore import Qt, QDate
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox, QTableWidget, QHeaderView, QCheckBox, QDateEdit, QLineEdit, QTableWidgetItem
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout, QMessageBox, QTableWidget, QHeaderView, QDateEdit, QLineEdit, QTableWidgetItem, QComboBox
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 from sys import exit
 
 
 # Main Class
-class FitTrack(QWidget):
+class ExerciseTracker(QWidget):
     def __init__(self):
         super().__init__()
         self.settings()
@@ -19,30 +20,30 @@ class FitTrack(QWidget):
     
     # Settings
     def settings(self):
-        self.setWindowTitle("FitTrack")
+        self.setWindowTitle("Exercise Tracker")
         self.resize(800,600)
-        
+
     # init UI
     def initUI(self):
         self.date_box = QDateEdit()
         self.date_box.setDate(QDate.currentDate()) # Displays current date
         
-        self.kal_box = QLineEdit()
-        self.kal_box.setPlaceholderText("Number of Burned Calories")
-        self.distance_box = QLineEdit()
-        self.distance_box.setPlaceholderText("Enter distance ran")
-        self.description = QLineEdit()
-        self.description.setPlaceholderText("Enter a description")
+        self.rep_box = QLineEdit()
+        self.rep_box.setPlaceholderText("Number of reps completed")
+        self.weight_box = QLineEdit()
+        self.weight_box.setPlaceholderText("Enter weight lifted (lbs)")
+        self.exercise_type = QComboBox()
+        self.exercise_type.addItems(["Bench Press", "Squat", "Deadlift", "Other"])
 
         self.submit_btn = QPushButton("Submit")
         self.add_btn = QPushButton("Add")
         self.delete_btn = QPushButton("Delete")
         self.clear_btn = QPushButton("Clear")
-        self.dark_mode = QPushButton("Dark Mode")
+        self.summary_btn = QPushButton(" Workout Summary")
 
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Id","Date","Calories","Distance","Description"])
+        self.table.setHorizontalHeaderLabels(["Id","Date","Reps","Weight","Exercise Type"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # Removes the whitespace for the table label
 
         self.figure = plt.figure()
@@ -60,18 +61,17 @@ class FitTrack(QWidget):
 
         self.sub_row1.addWidget(QLabel("Date:"))
         self.sub_row1.addWidget(self.date_box)
-        self.sub_row2.addWidget(QLabel("Calories:"))
-        self.sub_row2.addWidget(self.kal_box)
-        self.sub_row3.addWidget(QLabel("KM:"))
-        self.sub_row3.addWidget(self.distance_box)
-        self.sub_row4.addWidget(QLabel("Description:"))
-        self.sub_row4.addWidget(self.description)
+        self.sub_row2.addWidget(QLabel("Reps:"))
+        self.sub_row2.addWidget(self.rep_box)
+        self.sub_row3.addWidget(QLabel("Lbs:"))
+        self.sub_row3.addWidget(self.weight_box)
+        self.sub_row4.addWidget(QLabel("Exercise:"))
+        self.sub_row4.addWidget(self.exercise_type)
 
         self.col1.addLayout(self.sub_row1)
         self.col1.addLayout(self.sub_row2)
         self.col1.addLayout(self.sub_row3)
         self.col1.addLayout(self.sub_row4)
-        self.col1.addWidget(self.dark_mode)
 
         btn_row1 = QHBoxLayout()
         btn_row2 = QHBoxLayout()
@@ -90,7 +90,7 @@ class FitTrack(QWidget):
         self.master_layout.addLayout(self.col1, 30)
         self.master_layout.addLayout(self.col2, 70)
         self.setLayout(self.master_layout)
-
+    
         self.apply_styles()
         self.load_table()
 
@@ -98,7 +98,7 @@ class FitTrack(QWidget):
     def button_click(self):
         self.add_btn.clicked.connect(self.add_workout)
         self.delete_btn.clicked.connect(self.delete_workout)
-        self.submit_btn.clicked.connect(self.calculate_calories)
+        self.submit_btn.clicked.connect(self.calculate_reps)
         self.clear_btn.clicked.connect(self.reset)
 
     # Load Tables
@@ -109,39 +109,42 @@ class FitTrack(QWidget):
         while query.next():
             fit_id = query.value(0)
             date = query.value(1)
-            calories = query.value(2)
-            distance = query.value(3)
-            description = query.value(4)
+            reps = query.value(2)
+            weight = query.value(3)
+            exercise = query.value(4)
 
             self.table.insertRow(row)
             self.table.setItem(row, 0, QTableWidgetItem(str(fit_id)))
             self.table.setItem(row, 1, QTableWidgetItem(date))
-            self.table.setItem(row, 2, QTableWidgetItem(str(calories)))
-            self.table.setItem(row, 3, QTableWidgetItem(str(distance)))
-            self.table.setItem(row, 4, QTableWidgetItem(description))
+            self.table.setItem(row, 2, QTableWidgetItem(str(reps)))
+            self.table.setItem(row, 3, QTableWidgetItem(str(weight)))
+            self.table.setItem(row, 4, QTableWidgetItem(exercise))
             row += 1
 
     # Add Tables
     def add_workout(self):
         date = self.date_box.date().toString("yyyy-MM-dd")
-        calories = self.kal_box.text()
-        distance = self.distance_box.text()
-        description = self.description.text()
+        reps = self.rep_box.text()
+        weight = self.weight_box.text()
+        exercise = self.exercise_type.currentText()
 
         query = QSqlQuery("""
-                          INSERT INTO fitness (date, calories, distance, description)
+                          INSERT INTO fitness (date, reps, weight, exercise_type)
                           VALUES (?,?,?,?)
                           """)
         query.addBindValue(date)
-        query.addBindValue(calories)
-        query.addBindValue(distance)
-        query.addBindValue(description)
-        query.exec_()
+        query.addBindValue(reps)
+        query.addBindValue(weight)
+        query.addBindValue(exercise)
+
+        if not query.exec_():
+            print(query.lastError().text())
+        else:
+            print("Successfully logged workout")
 
         self.date_box.setDate(QDate.currentDate())
-        self.kal_box.clear()
-        self.distance_box.clear()
-        self.description.clear()
+        self.rep_box.clear()
+        self.weight_box.clear()
 
         self.load_table()
 
@@ -152,6 +155,7 @@ class FitTrack(QWidget):
 
         if selected_row == -1:
             QMessageBox.warning(self,"Error","Please choose a row to delete")
+            return
 
         fit_id = int(self.table.item(selected_row, 0).text())
         confirm = QMessageBox.question(self,"Are you sure?", "Delete this workout", QMessageBox.Yes | QMessageBox.No)
@@ -166,41 +170,57 @@ class FitTrack(QWidget):
 
         self.load_table()
 
-    # Calc Calories
-    def calculate_calories(self):
-        distances = []
-        calories = []
+    # Calc Reps
+    def calculate_reps(self):
+        weights = []
+        reps = []
+        exercises = []
 
-        query = QSqlQuery("SELECT distance, calories From fitness ORDER BY calories ASC")
+        query = QSqlQuery("SELECT weight, reps, exercise_type From fitness ORDER BY reps ASC")
         while query.next():
-            distance = query.value(0)
-            calorie = query.value(1)
-            distances.append(distance)
-            calories.append(calorie)
+            weight = query.value(0)
+            rep = query.value(1)
+            exercise = query.value(2)
+            weights.append(weight)
+            reps.append(rep)
+            exercises.append(exercise)
+
 
         try:
-            min_calorie = min(calories)
-            max_calories = max(calories)
-            normalized_calories = [(calorie - min_calorie) / (max_calories - min_calorie) for calorie in calories]
+            exercise_colours = {
+                'Bench Press': 'red',
+                'Squat': 'blue',
+                'Deadlift': 'yellow',
+                'Other': 'green'
+            }
 
-            plt.style.use("Solarize_Light2") # Possibly customize (Google 'plt.style.use' and read documentation)
+            colours = [exercise_colours.get(exercise) for exercise in exercises]
+
+            plt.style.use("fivethirtyeight") # Possibly customize (Google 'plt.style.use' and read documentation)
             ax = self.figure.subplots()
-            ax.scatter(distances, calories, c=normalized_calories, cmap="viridis", label="Data Points")
-            ax.set_title("Distance vs. Calories")
-            ax.set_xlabel("Distance")
-            ax.set_ylabel("Calories")
-            cbar = ax.figure.colorbar(ax.collections[0], label="Normalized Calories")
-            ax.legend()
+            ax.scatter(weights, reps, c=colours, label="Data Points")
+            ax.set_title("Weight Lifted vs. Reps Completed")
+            ax.set_xlabel("Weight")
+            ax.set_ylabel("Reps")
+
+            # Legend
+            red_patch = mpatches.Patch(color="red", label="Bench Press")
+            blue_patch = mpatches.Patch(color="blue", label="Squat")
+            yellow_patch = mpatches.Patch(color="yellow", label="Deadlift")
+            green_patch = mpatches.Patch(color="green", label="Other")
+            patch_list = [red_patch, blue_patch, yellow_patch, green_patch]
+            ax.legend(handles=patch_list)
+
             self.canvas.draw()
 
         except Exception as e:
-            print("ERROR:{e}")
+            print(f"ERROR {e}")
             QMessageBox.warning(self,"Error","Please enter some data first!")
 
     def apply_styles(self):
         self.setStyleSheet("""
             QWidget {
-                background-color: #b8c9e1;
+                background-color: #FFA500;
             }
             
             QLabel {
@@ -209,21 +229,21 @@ class FitTrack(QWidget):
             }
             
             QLineEdit, QComboBox, QDateEdit {
-                background-color: #b8c9e1;
+                background-color: #FFA500;
                 color: #333;
                 border: 1px solid #444;
                 padding: 5px;
             }
             
             QTableWidget {
-                background-color: #b8c9e1;
+                background-color: #FFA500;
                 color: #333;
                 border: 1px solid #444;
                 selection-background-color: #ddd;
             }
             
             QPushButton {
-                background-color: #4caf50;
+                background-color: #1d5191;
                 color: #fff;
                 border: none;
                 padding: 8px 16px;
@@ -234,20 +254,31 @@ class FitTrack(QWidget):
                 background-color: #45a049;
             }
         """)
-        figure_color = "#b8c9e1"
+        figure_color = "#FFA500"
         self.figure.patch.set_facecolor(figure_color)
         self.canvas.setStyleSheet(f"background-color:{figure_color}")
-    # Click
+    
+    # def summary(self):
 
-    # Dark Mode
+    #     query = QSqlQuery("SELECT COUNT(*), SUM(weight), SUM(reps), AVG(weight) FROM fitness")
+    #     if query.next():
+    #         total_workouts = query.value(0)
+    #         self.total_workouts_label.setText(f"Total Workouts: {total_workouts}")
 
+    #         total_weight_lifted = query.value(1)
+    #         self.total_weight_label.setText(f"Total Weight Lifted: {total_weight_lifted} lbs") 
 
-    # Reset
+    #         total_reps = query.value(2)
+    #         self.total_reps_label.setText(f"Total Reps Completed: {total_reps}")
+
+    #         average_weight = query.value(3)
+    #         self.average_weight_label.setText(f"Average Weight per Exercise: {average_weight} lbs")
+
+    # Reset (Doesn't reset table)
     def reset(self):
         self.date_box.setDate(QDate.currentDate())
-        self.kal_box.clear()
-        self.distance_box.clear()
-        self.description.clear()
+        self.rep_box.clear()
+        self.weight_box.clear()
         self.figure.clear()
         self.canvas.draw()
 
@@ -265,14 +296,14 @@ query.exec_("""
             CREATE TABLE IF NOT EXISTS fitness (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 date TEXT,
-                calories REAL,
-                distance REAL,
-                description TEXT
+                reps INTEGER,
+                weight REAL,
+                exercise_type TEXT
             )
             """)
 
 if __name__ == "__main__":
     app = QApplication([])
-    main = FitTrack()
+    main = ExerciseTracker()
     main.show()
     app.exec_()
